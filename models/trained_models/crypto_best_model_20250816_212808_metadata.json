@@ -1,0 +1,72 @@
+{
+  "model_name": "DecisionTree",
+  "feature_names": [
+    "feature_3",
+    "feature_4",
+    "feature_7",
+    "feature_8",
+    "feature_9",
+    "feature_10",
+    "feature_11",
+    "feature_12",
+    "feature_13",
+    "feature_14",
+    "feature_15",
+    "feature_16",
+    "feature_18",
+    "feature_19",
+    "feature_20",
+    "feature_21",
+    "feature_22",
+    "feature_27",
+    "feature_28",
+    "feature_29",
+    "feature_30",
+    "feature_33",
+    "feature_34",
+    "feature_35",
+    "feature_36"
+  ],
+  "results": {
+    "RandomForest": {
+      "train_r2": 0.9989119923577574,
+      "val_r2": 0.9999821484346162,
+      "test_r2": 0.9995465176579953,
+      "train_adj_r2": 0.9989119105088546,
+      "test_adj_r2": 0.9995464084735417,
+      "test_mse": 0.0004006190567231633,
+      "test_mae": 0.0014526673837061553,
+      "test_rmse": 0.020015470434720323,
+      "overfitting_score": -0.000634525300237887
+    },
+    "DecisionTree": {
+      "train_r2": 0.9999890777015114,
+      "val_r2": 0.9999417522662336,
+      "test_r2": 0.999832109734915,
+      "train_adj_r2": 0.9999890768798461,
+      "test_adj_r2": 0.9998320693121573,
+      "test_mse": 0.00014831898268408356,
+      "test_mae": 0.0020949590566540096,
+      "test_rmse": 0.012178628111740811,
+      "overfitting_score": 0.00015696796659636636
+    },
+    "XGBoost": {
+      "train_r2": 0.959037153849132,
+      "val_r2": 0.9721340563250824,
+      "test_r2": 0.9717927344202426,
+      "train_adj_r2": 0.9590340722862087,
+      "test_adj_r2": 0.9717859429873835,
+      "test_mse": 0.02491909184235482,
+      "test_mae": 0.011741556034773504,
+      "test_rmse": 0.1578578216065166,
+      "overfitting_score": -0.012755580571110592
+    }
+  },
+  "timestamp": "20250816_212808",
+  "metrics": {
+    "test_r2": 0.999832109734915,
+    "test_adj_r2": 0.9998320693121573,
+    "test_rmse": 0.012178628111740811,
+    "overfitting_score": 0.00015696796659636636
+  }
+}

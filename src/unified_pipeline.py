@@ -39,41 +39,53 @@ class CryptoFeatureEngineer(BaseEstimator, TransformerMixin):
         """Transform raw data into engineered features"""
         X_copy = X.copy()
         
-        # Start with existing features
+        # Create features in EXACT order - this is critical for consistency
         features_dict = {}
         
-        # Add all existing numeric features (except symbol and time)
-        for col in X_copy.columns:
-            if col not in ['symbol', 'time']:  # Exclude non-numeric columns
-                if X_copy[col].dtype in ['int64', 'float64']:  # Only numeric columns
-                    features_dict[col] = X_copy[col]
+        # 1. First add original numerical features in fixed order
+        base_features = ['high', 'low', 'open', 'volumefrom', 'volumeto', 'close']
+        for col in base_features:
+            if col in X_copy.columns:
+                features_dict[col] = X_copy[col]
         
-        # Only add technical indicators if basic price columns exist
+        # 2. Add existing engineered features if they exist (in fixed order)
+        existing_engineered = ['hl_range', 'candle_body', 'upper_shadow', 'lower_shadow', 'body_to_range', 'return_1', 'log_return']
+        for col in existing_engineered:
+            if col in X_copy.columns:
+                features_dict[col] = X_copy[col]
+        
+        # 3. Only calculate NEW features if they don't already exist
         if all(col in X_copy.columns for col in ['high', 'low', 'open', 'close']):
-            # Technical indicators - REMOVE _new suffix
-            hl_range = X_copy['high'] - X_copy['low']
-            candle_body = abs(X_copy['close'] - X_copy['open'])
-            upper_shadow = X_copy['high'] - np.maximum(X_copy['close'], X_copy['open'])
-            lower_shadow = np.minimum(X_copy['close'], X_copy['open']) - X_copy['low']
-            body_to_range = candle_body / hl_range.replace(0, 1)
+            # Technical indicators (only if not already present)
+            if 'hl_range' not in features_dict:
+                hl_range = X_copy['high'] - X_copy['low']
+                features_dict['hl_range'] = hl_range
+            else:
+                hl_range = features_dict['hl_range']
+                
+            if 'candle_body' not in features_dict:
+                features_dict['candle_body'] = abs(X_copy['close'] - X_copy['open'])
+            if 'upper_shadow' not in features_dict:
+                features_dict['upper_shadow'] = X_copy['high'] - np.maximum(X_copy['close'], X_copy['open'])
+            if 'lower_shadow' not in features_dict:
+                features_dict['lower_shadow'] = np.minimum(X_copy['close'], X_copy['open']) - X_copy['low']
+            if 'body_to_range' not in features_dict:
+                features_dict['body_to_range'] = features_dict['candle_body'] / features_dict['hl_range'].replace(0, 1)
             
-            features_dict.update({
-                'hl_range': hl_range,           # Changed: removed _new
-                'candle_body': candle_body,     # Changed: removed _new
-                'upper_shadow': upper_shadow,   # Changed: removed _new
-                'lower_shadow': lower_shadow,   # Changed: removed _new
-                'body_to_range': body_to_range  # Changed: removed _new
-            })
+            # Add return features (only if not present)
+            if 'log_return' not in features_dict:
+                prev_close = X_copy['close'] * 0.99  # Simulate previous close
+                features_dict['log_return'] = np.log(X_copy['close'] / prev_close.replace(0, 1))
             
-            # Price ratios - REMOVE _new suffix
+            # 4. Add price ratio features (always calculate)
             features_dict.update({
                 'close_open_ratio': X_copy['close'] / X_copy['open'].replace(0, 1),
                 'high_low_ratio': X_copy['high'] / X_copy['low'].replace(0, 1),
-                'typical_price': (X_copy['high'] + X_copy['low']) / 2,
+                'typical_price': (X_copy['high'] + X_copy['low'] + X_copy['close']) / 3,
                 'hlc_avg': (X_copy['high'] + X_copy['low'] + X_copy['close']) / 3
             })
             
-            # Add time-based features (required by preprocessing)
+            # 5. Add time-based features
             current_time = datetime.now()
             features_dict.update({
                 'hour': current_time.hour,
@@ -83,28 +95,26 @@ class CryptoFeatureEngineer(BaseEstimator, TransformerMixin):
                 'weekday': current_time.weekday()
             })
             
-            # Add volume features
+            # 6. Add volume features
             features_dict.update({
                 'volume_ratio': X_copy['volumefrom'] / X_copy['volumeto'].replace(0, 1),
                 'volume_price_ratio': X_copy['volumefrom'] / X_copy['close'].replace(0, 1)
             })
             
-            # Add return features
-            prev_close = X_copy['close'] * 0.99  # Simulate previous close
-            features_dict.update({
-                'return_1': (X_copy['close'] - prev_close) / prev_close.replace(0, 1),
-                'log_return': np.log(X_copy['close'] / prev_close.replace(0, 1))
-            })
+            # 7. Add return_1 (if not already present)
+            if 'return_1' not in features_dict:
+                prev_close = X_copy['close'] * 0.99  # Simulate previous close
+                features_dict['return_1'] = (X_copy['close'] - prev_close) / prev_close.replace(0, 1)
             
-            # Add additional features
+            # 8. Add additional features
             features_dict.update({
                 'log_price': np.log(X_copy['close'].replace(0, 1)),
                 'log_volume': np.log(X_copy['volumefrom'].replace(0, 1)),
                 'price_volume': X_copy['close'] * X_copy['volumefrom'],
-                'range_volume': hl_range * X_copy['volumefrom']
+                'range_volume': features_dict['hl_range'] * X_copy['volumefrom']
             })
         
-        # Symbol encoding
+        # 9. Symbol encoding (always last)
         if 'symbol' in X_copy.columns:
             try:
                 features_dict['symbol_encoded'] = self.symbol_encoder.transform(X_copy['symbol'])
@@ -114,8 +124,16 @@ class CryptoFeatureEngineer(BaseEstimator, TransformerMixin):
                 safe_symbols = X_copy['symbol'].map(lambda x: x if x in known_symbols else known_symbols[0])
                 features_dict['symbol_encoded'] = self.symbol_encoder.transform(safe_symbols)
     
-        # Create DataFrame
+        # 10. Create DataFrame with FIXED column order to ensure consistency
+        expected_order = ['high', 'low', 'open', 'volumefrom', 'volumeto', 'close', 
+                         'hl_range', 'candle_body', 'upper_shadow', 'lower_shadow', 'body_to_range', 
+                         'log_return', 'close_open_ratio', 'high_low_ratio', 'typical_price', 'hlc_avg', 
+                         'hour', 'day', 'month', 'quarter', 'weekday', 'volume_ratio', 'volume_price_ratio', 
+                         'return_1', 'log_price', 'log_volume', 'price_volume', 'range_volume', 'symbol_encoded']
+        
         result_df = pd.DataFrame(features_dict)
+        # Reorder columns to match expected order
+        result_df = result_df.reindex(columns=[col for col in expected_order if col in result_df.columns])
         
         # Handle any infinite or NaN values
         result_df = result_df.replace([np.inf, -np.inf], 0)
