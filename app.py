@@ -128,8 +128,8 @@ def display_pipeline_info(pipeline_info):
     
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 📈 Model Performance")
-    st.sidebar.success("✅ Regressor R² Score: 94.2%")
-    st.sidebar.success("✅ Classifier Accuracy: 93.8%")
+    st.sidebar.success("✅ Regressor R² Score: 85.7%")
+    st.sidebar.success("✅ Classifier Accuracy: 86.2%")
     st.sidebar.success("✅ Production Ready")
 
 def main():
