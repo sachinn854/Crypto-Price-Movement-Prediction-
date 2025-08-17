@@ -1,5 +1,4 @@
-APP LINK - https://crypto-price-movement-prediction.streamlit.app/
-
+APP-LINK -  https://crypto-price-movement-prediction.streamlit.app/
 # 🚀 Crypto Price Movement Prediction
 
 A comprehensive machine learning project for predicting cryptocurrency price movements using advanced ML algorithms and real-time data analysis.
