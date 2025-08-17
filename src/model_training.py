@@ -1,285 +1,355 @@
-"""
-🤖 Improved Model Training Module for Crypto Price Prediction
-============================================================
-
-Enhanced with:
-- Proper R² calculation (train/test separate)
-- Adjusted R² for overfitting detection
-- TimeSeriesSplit for cross-validation
-- Feature selection to remove leakage
-- Multiple models with hyperparameter tuning
-
-Author: Crypto Prediction Pipeline
-Version: 2.0
-"""
-
-import pandas as pd
+# model_training.py
+from __future__ import annotations
+import os
+from typing import Tuple, Dict, Any
 import numpy as np
-import joblib
-import json
-from datetime import datetime
-from typing import Dict, Any, Tuple, List
-import warnings
-warnings.filterwarnings('ignore')
-
-# ML Models
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.tree import DecisionTreeRegressor
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import r2_score, mean_absolute_error, accuracy_score, classification_report
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 import xgboost as xgb
+import lightgbm as lgb
+from joblib import dump
 
-# Metrics and Validation
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
-from sklearn.feature_selection import SelectKBest, f_regression
+from feature_engineering_module import CryptoFeatureEngineer
+from preprocessing_module import CryptoPreprocessor
 
-def calculate_adjusted_r2(r2: float, n_samples: int, n_features: int) -> float:
-    """Calculate adjusted R² to detect overfitting"""
-    if n_samples <= n_features + 1:
-        return float('-inf')
-    return 1 - (1 - r2) * (n_samples - 1) / (n_samples - n_features - 1)
-
-def remove_leakage_features(X: pd.DataFrame) -> pd.DataFrame:
-    """Remove only the most problematic leakage features - keep more features"""
-    # Only remove the most obvious leakage features, keep others for better predictions
-    high_leakage_features = [
-        'gap_up', 'gap_down', 'gap_size'  # Only remove gap features
-    ]
-    
-    features_to_remove = [col for col in high_leakage_features if col in X.columns]
-    if features_to_remove:
-        print(f"   🚫 Removing high leakage features: {features_to_remove}")
-        X = X.drop(columns=features_to_remove)
-    
-    print(f"   ✅ Keeping {X.shape[1]} features for better model performance")
-    
-    return X
-
-def train_models(X_train: np.ndarray, X_val: np.ndarray, X_test: np.ndarray,
-                y_train: np.ndarray, y_val: np.ndarray, y_test: np.ndarray,
-                feature_names: List[str] = None, models_dir: str = "models/trained_models", optimize_hyperparams: bool = False) -> Dict[str, Any]:
+# ---------------- Time-aware split ----------------
+def time_aware_split(
+    df: pd.DataFrame,
+    symbol_col: str = "symbol",
+    time_col: str = "time",
+    target_col: str = "return_1",
+    test_size: float = 0.2,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Train multiple models with proper evaluation
-    
-    Returns:
-        Path to saved best model
+    Per-symbol chronological split to avoid leakage.
     """
-    print("\n🤖 STEP 3: MODEL TRAINING WITH COMPREHENSIVE EVALUATION")
-    print("=" * 60)
-    
-    # Auto-detect feature names if not provided
-    if feature_names is None:
-        feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]
-    
-    print(f"📊 Training data shape: {X_train.shape}")
-    print(f"📋 Feature names provided: {len(feature_names)}")
-    
-    # Convert to DataFrames for easier handling
-    X_train_df = pd.DataFrame(X_train, columns=feature_names)
-    X_val_df = pd.DataFrame(X_val, columns=feature_names)
-    X_test_df = pd.DataFrame(X_test, columns=feature_names)
-    
-    # Remove leakage features
-    print("🔍 Checking for data leakage...")
-    X_train_clean = remove_leakage_features(X_train_df)
-    X_val_clean = X_val_df[X_train_clean.columns]
-    X_test_clean = X_test_df[X_train_clean.columns]
-    
-    print(f"   📊 Features after leakage removal: {X_train_clean.shape[1]}")
-    
-    # Feature selection (keep top 25 features for better accuracy)
-    print("🎯 Feature selection...")
-    selector = SelectKBest(score_func=f_regression, k=min(25, X_train_clean.shape[1]))
-    X_train_selected = selector.fit_transform(X_train_clean, y_train)
-    X_val_selected = selector.transform(X_val_clean)
-    X_test_selected = selector.transform(X_test_clean)
-    
-    selected_features = X_train_clean.columns[selector.get_support()].tolist()
-    print(f"   ✅ Selected {len(selected_features)} best features")
-    
-    models = {}
-    results = {}
-    
-    # Simple model configurations for faster training - Only 3 models
-    model_configs = {
-        'RandomForest': {
-            'model': RandomForestRegressor(n_estimators=50, max_depth=8, random_state=42, n_jobs=-1),
-            'tune': False
-        },
-        'DecisionTree': {
-            'model': DecisionTreeRegressor(max_depth=10, random_state=42),
-            'tune': True,
-            'params': {
-                'max_depth': [8, 10, 15],
-                'min_samples_split': [2, 5, 10]
-            }
-        },
-        'XGBoost': {
-            'model': xgb.XGBRegressor(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42, verbosity=0),
-            'tune': True,
-            'params': {
-                'n_estimators': [50, 100],
-                'max_depth': [6, 10],
-                'learning_rate': [0.05, 0.1]
-            }
-        }
-    }
-    
-    print(f"\n🚀 Training {len(model_configs)} models...")
-    
-    for model_name, config in model_configs.items():
-        print(f"\n📈 Training {model_name}...")
-        
-        try:
-            if config.get('tune', False):
-                # Hyperparameter tuning with simple CV
-                from sklearn.model_selection import cross_val_score
-                
-                best_score = -np.inf
-                best_model = None
-                best_params = None
-                
-                # Simple grid search
-                param_grid = config.get('params', {})
-                param_combinations = [{}]
-                
-                if param_grid:
-                    keys = list(param_grid.keys())
-                    values = list(param_grid.values())
-                    import itertools
-                    param_combinations = [dict(zip(keys, combo)) for combo in itertools.product(*values)]
-                
-                for params in param_combinations:
-                    model = type(config['model'])(**{**config['model'].get_params(), **params})
-                    
-                    # Quick 3-fold CV
-                    scores = cross_val_score(model, X_train_selected, y_train, cv=3, scoring='r2')
-                    mean_score = scores.mean()
-                    
-                    if mean_score > best_score:
-                        best_score = mean_score
-                        best_model = model
-                        best_params = params
-                
-                final_model = best_model
-            else:
-                final_model = config['model']
-            
-            # Train final model
-            final_model.fit(X_train_selected, y_train)
-            
-            # Predictions
-            y_train_pred = final_model.predict(X_train_selected)
-            y_val_pred = final_model.predict(X_val_selected)
-            y_test_pred = final_model.predict(X_test_selected)
-            
-            # Calculate metrics
-            train_r2 = r2_score(y_train, y_train_pred)
-            val_r2 = r2_score(y_val, y_val_pred)
-            test_r2 = r2_score(y_test, y_test_pred)
-            
-            # Adjusted R² for overfitting detection
-            train_adj_r2 = calculate_adjusted_r2(train_r2, len(y_train), X_train_selected.shape[1])
-            test_adj_r2 = calculate_adjusted_r2(test_r2, len(y_test), X_train_selected.shape[1])
-            
-            # Other metrics
-            test_mse = mean_squared_error(y_test, y_test_pred)
-            test_mae = mean_absolute_error(y_test, y_test_pred)
-            test_rmse = np.sqrt(test_mse)
-            
-            # Store results
-            models[model_name] = final_model
-            results[model_name] = {
-                'train_r2': train_r2,
-                'val_r2': val_r2,
-                'test_r2': test_r2,
-                'train_adj_r2': train_adj_r2,
-                'test_adj_r2': test_adj_r2,
-                'test_mse': test_mse,
-                'test_mae': test_mae,
-                'test_rmse': test_rmse,
-                'overfitting_score': train_r2 - test_r2  # Positive = overfitting
-            }
-            
-            print(f"   ✅ {model_name} completed:")
-            print(f"      Train R²: {train_r2:.4f} | Test R²: {test_r2:.4f}")
-            print(f"      Adj R² (Train): {train_adj_r2:.4f} | Adj R² (Test): {test_adj_r2:.4f}")
-            print(f"      Overfitting: {train_r2 - test_r2:.4f}")
-            
-        except Exception as e:
-            print(f"   ❌ {model_name} failed: {str(e)}")
+    if time_col not in df.columns:
+        raise ValueError(f"Column '{time_col}' not found for time-aware split.")
+
+    parts_train, parts_test = [], []
+    for sym, g in df.groupby(symbol_col):
+        g = g.sort_values(time_col)
+        n = len(g)
+        if n < 5:  # too tiny, dump all in train
+            parts_train.append(g)
             continue
+        cut = int(np.floor(n * (1 - test_size)))
+        parts_train.append(g.iloc[:cut])
+        parts_test.append(g.iloc[cut:])
+
+    train = pd.concat(parts_train, axis=0).reset_index(drop=True)
+    test = pd.concat(parts_test, axis=0).reset_index(drop=True) if parts_test else pd.DataFrame(columns=df.columns)
+    # drop rows with missing target
+    train = train[train[target_col].notna()]
+    test  = test[test[target_col].notna()]
+    return train, test
+
+
+def build_pipeline(model_type: str = "random_forest", task_type: str = "regression", k_best: int = 20, model_params: Dict[str, Any] | None = None) -> Pipeline:
+    """
+    Build pipeline with specified model type and task type.
+    Supported models: random_forest, decision_tree, xgboost, lightgbm
+    Supported tasks: regression, classification
+    """
+    if model_params is None:
+        model_params = {}
     
-    if not results:
-        raise ValueError("No models trained successfully!")
-    
-    # Find best model (prioritize test R² with low overfitting)
-    best_model_name = max(results.keys(), 
-                         key=lambda x: results[x]['test_r2'] - 0.1 * abs(results[x]['overfitting_score']))
-    
-    print(f"\n🏆 BEST MODEL: {best_model_name}")
-    print("=" * 40)
-    best_result = results[best_model_name]
-    print(f"📊 Test R²: {best_result['test_r2']:.4f}")
-    print(f"📊 Adjusted R²: {best_result['test_adj_r2']:.4f}")
-    print(f"📊 Test RMSE: {best_result['test_rmse']:.4f}")
-    print(f"📊 Overfitting Score: {best_result['overfitting_score']:.4f}")
-    
-    # Save best model
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
-    # Create directory if it doesn't exist
-    import os
-    os.makedirs(models_dir, exist_ok=True)
-    
-    model_path = f"{models_dir}/crypto_best_model_{timestamp}.joblib"
-    
-    # Create metadata
-    metadata = {
-        'model_name': best_model_name,
-        'feature_names': selected_features,
-        'results': results,
-        'timestamp': timestamp,
-        'metrics': {
-            'test_r2': best_result['test_r2'],
-            'test_adj_r2': best_result['test_adj_r2'],
-            'test_rmse': best_result['test_rmse'],
-            'overfitting_score': best_result['overfitting_score']
+    # Define default parameters for each model type and task
+    default_params = {
+        "regression": {
+            "random_forest": dict(
+                n_estimators=300,
+                max_depth=10,
+                min_samples_split=4,
+                min_samples_leaf=2,
+                n_jobs=-1,
+                random_state=42,
+            ),
+            "decision_tree": dict(
+                max_depth=15,
+                min_samples_split=4,
+                min_samples_leaf=2,
+                random_state=42,
+            ),
+            "xgboost": dict(
+                n_estimators=300,
+                max_depth=8,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1,
+            ),
+            "lightgbm": dict(
+                n_estimators=300,
+                max_depth=10,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1,
+                verbose=-1,
+            )
+        },
+        "classification": {
+            "random_forest": dict(
+                n_estimators=300,
+                max_depth=10,
+                min_samples_split=4,
+                min_samples_leaf=2,
+                n_jobs=-1,
+                random_state=42,
+                class_weight='balanced',
+            ),
+            "decision_tree": dict(
+                max_depth=15,
+                min_samples_split=4,
+                min_samples_leaf=2,
+                random_state=42,
+                class_weight='balanced',
+            ),
+            "xgboost": dict(
+                n_estimators=300,
+                max_depth=8,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1,
+                objective='binary:logistic',
+            ),
+            "lightgbm": dict(
+                n_estimators=300,
+                max_depth=10,
+                learning_rate=0.1,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                n_jobs=-1,
+                verbose=-1,
+                objective='binary',
+                class_weight='balanced',
+            )
         }
     }
     
-    # Save model and metadata
-    joblib.dump(models[best_model_name], model_path)
+    # Select model based on task type
+    if task_type == "regression":
+        if model_type == "random_forest":
+            params = {**default_params["regression"]["random_forest"], **model_params}
+            model = RandomForestRegressor(**params)
+        elif model_type == "decision_tree":
+            params = {**default_params["regression"]["decision_tree"], **model_params}
+            model = DecisionTreeRegressor(**params)
+        elif model_type == "xgboost":
+            params = {**default_params["regression"]["xgboost"], **model_params}
+            model = xgb.XGBRegressor(**params)
+        elif model_type == "lightgbm":
+            params = {**default_params["regression"]["lightgbm"], **model_params}
+            model = lgb.LGBMRegressor(**params)
+        else:
+            raise ValueError(f"Unsupported model type for regression: {model_type}")
+            
+    elif task_type == "classification":
+        if model_type == "random_forest":
+            params = {**default_params["classification"]["random_forest"], **model_params}
+            model = RandomForestClassifier(**params)
+        elif model_type == "decision_tree":
+            params = {**default_params["classification"]["decision_tree"], **model_params}
+            model = DecisionTreeClassifier(**params)
+        elif model_type == "xgboost":
+            params = {**default_params["classification"]["xgboost"], **model_params}
+            model = xgb.XGBClassifier(**params)
+        elif model_type == "lightgbm":
+            params = {**default_params["classification"]["lightgbm"], **model_params}
+            model = lgb.LGBMClassifier(**params)
+        else:
+            raise ValueError(f"Unsupported model type for classification: {model_type}")
+    else:
+        raise ValueError(f"Unsupported task type: {task_type}. Use: regression, classification")
     
-    metadata_path = model_path.replace('.joblib', '_metadata.json')
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2, default=str)
+    pipe = Pipeline(steps=[
+        ("feature_engineering", CryptoFeatureEngineer()),
+        ("preprocessing", CryptoPreprocessor(k=k_best)),
+        ("model", model),
+    ])
+    return pipe
+
+
+def train_and_save(
+    df: pd.DataFrame,
+    model_dir: str = "models",
+    regressor_name: str = "best_regressor_pipeline.pkl",
+    classifier_name: str = "best_classifier_pipeline.pkl",
+    k_best: int = 20,
+    test_all_models: bool = True,
+) -> Dict[str, Any]:
+    """
+    - Assumes df contains minimal raw columns + target 'return_1'
+    - Builds time-aware split
+    - Tests all models for both regression and classification tasks
+    - Saves best regressor and classifier pipelines separately
+    """
+    os.makedirs(model_dir, exist_ok=True)
+
+    # split
+    train_df, test_df = time_aware_split(df, target_col="return_1", test_size=0.2)
+
+    # minimal inputs required by FE
+    raw_cols = ["symbol", "time", "open", "high", "low", "close", "volumefrom", "volumeto"]
+    missing_cols = [c for c in raw_cols + ["return_1"] if c not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns for training: {missing_cols}")
+
+    X_train = train_df[raw_cols].copy()
+    y_train_reg = train_df["return_1"].astype(float).values  # For regression
+    y_train_clf = (train_df["return_1"] > 0).astype(int).values  # For classification (bullish/bearish)
+
+    X_test = test_df[raw_cols].copy()
+    y_test_reg = test_df["return_1"].astype(float).values
+    y_test_clf = (test_df["return_1"] > 0).astype(int).values
+
+    if test_all_models:
+        # Test all models for both tasks
+        print("🎯 Testing all models for REGRESSION and CLASSIFICATION tasks...")
+        models_to_test = ["random_forest", "decision_tree", "xgboost", "lightgbm"]
+        
+        # Results storage
+        regressor_results = {}
+        classifier_results = {}
+        
+        best_regressor_type = None
+        best_regressor_score = -float('inf')
+        best_regressor_metrics = None
+        best_regressor_pipeline = None
+        
+        best_classifier_type = None
+        best_classifier_score = -float('inf')
+        best_classifier_metrics = None
+        best_classifier_pipeline = None
+        
+        for model_type in models_to_test:
+            print(f"\n📈 Testing {model_type}...")
+            
+            # Test REGRESSION
+            try:
+                print(f"   🔢 Regression task...")
+                pipe_reg = build_pipeline(model_type=model_type, task_type="regression", k_best=k_best)
+                pipe_reg.fit(X_train, y_train_reg)
+                
+                y_pred_reg = pipe_reg.predict(X_test) if len(X_test) else np.array([])
+                if len(y_pred_reg) > 0:
+                    r2 = float(r2_score(y_test_reg, y_pred_reg))
+                    mae = float(mean_absolute_error(y_test_reg, y_pred_reg))
+                    
+                    regressor_results[model_type] = {
+                        "r2": r2,
+                        "mae": mae,
+                        "pipeline": pipe_reg
+                    }
+                    
+                    print(f"      R² Score: {r2:.4f}")
+                    print(f"      MAE: {mae:.4f}")
+                    
+                    if r2 > best_regressor_score:
+                        best_regressor_score = r2
+                        best_regressor_type = model_type
+                        best_regressor_pipeline = pipe_reg
+                        best_regressor_metrics = {
+                            "r2": r2,
+                            "mae": mae,
+                            "n_train": int(len(X_train)),
+                            "n_test": int(len(X_test)),
+                            "selected_features": getattr(pipe_reg.named_steps["preprocessing"], "selected_feature_names_", []),
+                        }
+                        
+            except Exception as e:
+                print(f"      ❌ Error in regression: {str(e)}")
+            
+            # Test CLASSIFICATION
+            try:
+                print(f"   📊 Classification task...")
+                pipe_clf = build_pipeline(model_type=model_type, task_type="classification", k_best=k_best)
+                pipe_clf.fit(X_train, y_train_clf)
+                
+                y_pred_clf = pipe_clf.predict(X_test) if len(X_test) else np.array([])
+                if len(y_pred_clf) > 0:
+                    accuracy = float(accuracy_score(y_test_clf, y_pred_clf))
+                    
+                    classifier_results[model_type] = {
+                        "accuracy": accuracy,
+                        "pipeline": pipe_clf
+                    }
+                    
+                    print(f"      Accuracy: {accuracy:.4f}")
+                    
+                    if accuracy > best_classifier_score:
+                        best_classifier_score = accuracy
+                        best_classifier_type = model_type
+                        best_classifier_pipeline = pipe_clf
+                        best_classifier_metrics = {
+                            "accuracy": accuracy,
+                            "n_train": int(len(X_train)),
+                            "n_test": int(len(X_test)),
+                            "selected_features": getattr(pipe_clf.named_steps["preprocessing"], "selected_feature_names_", []),
+                        }
+                        
+            except Exception as e:
+                print(f"      ❌ Error in classification: {str(e)}")
+        
+        # Fallback to random_forest if no models worked
+        if best_regressor_type is None:
+            print("❌ No regressors trained successfully, falling back to random_forest")
+            best_regressor_type = "random_forest"
+            best_regressor_pipeline = build_pipeline(model_type=best_regressor_type, task_type="regression", k_best=k_best)
+            best_regressor_pipeline.fit(X_train, y_train_reg)
+            
+        if best_classifier_type is None:
+            print("❌ No classifiers trained successfully, falling back to random_forest")
+            best_classifier_type = "random_forest"
+            best_classifier_pipeline = build_pipeline(model_type=best_classifier_type, task_type="classification", k_best=k_best)
+            best_classifier_pipeline.fit(X_train, y_train_clf)
+            
+    else:
+        # Use only Random Forest for both tasks
+        print("🎯 Training Random Forest models...")
+        
+        best_regressor_type = "random_forest"
+        best_regressor_pipeline = build_pipeline(model_type=best_regressor_type, task_type="regression", k_best=k_best)
+        best_regressor_pipeline.fit(X_train, y_train_reg)
+        
+        best_classifier_type = "random_forest"
+        best_classifier_pipeline = build_pipeline(model_type=best_classifier_type, task_type="classification", k_best=k_best)
+        best_classifier_pipeline.fit(X_train, y_train_clf)
+
+    # Save both models
+    regressor_path = os.path.join(model_dir, regressor_name)
+    classifier_path = os.path.join(model_dir, classifier_name)
     
-    print(f"\n💾 FILES SAVED:")
-    print(f"   📁 Model: {model_path}")
-    print(f"   📁 Metadata: {metadata_path}")
+    dump(best_regressor_pipeline, regressor_path)
+    dump(best_classifier_pipeline, classifier_path)
     
-    print(f"\n📊 MODEL COMPARISON:")
-    for model_name, result in results.items():
-        status = "🏆" if model_name == best_model_name else "📈"
-        print(f"   {status} {model_name}: R²={result['test_r2']:.4f}, "
-              f"Adj_R²={result['test_adj_r2']:.4f}, "
-              f"Overfitting={result['overfitting_score']:.4f}")
+    print(f"\n✅ Models saved:")
+    print(f"   📈 Regressor: {regressor_path}")
+    print(f"   📊 Classifier: {classifier_path}")
+    print(f"🏆 Best regressor: {best_regressor_type}")
+    print(f"🏆 Best classifier: {best_classifier_type}")
     
-    # Return complete results dictionary
+    if best_regressor_metrics and best_regressor_metrics.get("r2") is not None:
+        print(f"📊 Regressor R² Score: {best_regressor_metrics['r2']:.4f}")
+        print(f"📊 Regressor MAE: {best_regressor_metrics['mae']:.4f}")
+        
+    if best_classifier_metrics and best_classifier_metrics.get("accuracy") is not None:
+        print(f"📊 Classifier Accuracy: {best_classifier_metrics['accuracy']:.4f}")
+
     return {
-        'status': 'completed',
-        'best_model_name': best_model_name,
-        'best_model': models[best_model_name],  # Add the actual model object
-        'best_model_path': model_path,
-        'metadata_path': metadata_path,
-        'model_results': results,
-        'best_metrics': {
-            'test_r2': best_result['test_r2'],
-            'test_adj_r2': best_result['test_adj_r2'],
-            'test_rmse': best_result['test_rmse'],
-            'overfitting_score': best_result['overfitting_score']
-        },
-        'feature_names': selected_features,
-        'selector': selector,  # Add the feature selector
-        'timestamp': timestamp
+        "regressor_path": regressor_path,
+        "classifier_path": classifier_path,
+        "best_regressor_type": best_regressor_type,
+        "best_classifier_type": best_classifier_type,
+        "regressor_metrics": best_regressor_metrics,
+        "classifier_metrics": best_classifier_metrics,
     }

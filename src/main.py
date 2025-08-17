@@ -1,61 +1,47 @@
-"""
-🚀 Crypto Price Movement Prediction - Main Entry Point
-=====================================================
-Enhanced with unified pipeline approach
-"""
-
+# main.py
+from __future__ import annotations
+import argparse
 import os
-import sys
-from datetime import datetime
+import pandas as pd
 
-# Add current directory to the Python path for imports
-current_dir = os.path.dirname(__file__)
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(current_dir)
-sys.path.append(parent_dir)
+from unified_pipeline import CompleteCryptoPipeline
 
-# Import the unified pipeline
-from unified_pipeline import run_unified_pipeline
+def read_data(path: str) -> pd.DataFrame:
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    df = pd.read_csv(path)
+    # standardize column names (lowercase)
+    df.columns = [c.strip() for c in df.columns]
+    # ensure required minimal columns exist
+    required = ["symbol", "time", "open", "high", "low", "close", "volumefrom", "volumeto"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns in data: {missing}")
+    return df
 
 def main():
-    """Main execution function"""
-    print("🚀 CRYPTO PRICE MOVEMENT PREDICTION")
-    print("=" * 50)
-    print(f"📅 Started at: {datetime.now()}")
-    print()
-    
-    # Data path - corrected to use processed data (go up one level from src)
-    data_path = os.path.join(parent_dir, "Data", "processed", "final_cleaned_crypto_zero_removed.csv")
-    
-    # Check if data exists
-    if not os.path.exists(data_path):
-        print(f"❌ Data file not found: {data_path}")
-        print("   Please ensure the data file exists.")
-        return False
-    
-    print(f"📊 Using data: {data_path}")
-    print()
-    
-    # Run unified pipeline
-    success, result = run_unified_pipeline(data_path)
-    
-    if success:
-        print("\n🎉 SUCCESS: Unified pipeline completed!")
-        print(f"📁 Pipeline saved: {result['pipeline_path']}")
-        print(f"🏆 Best model: {result['best_model']}")
-        return True
-    else:
-        print(f"\n❌ FAILED: {result}")
-        return False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data", type=str, default="../Data/processed/final_cleaned_crypto_zero_removed.csv",
+                        help="CSV with columns: symbol,time,open,high,low,close,volumefrom,volumeto[,return_1]")
+    parser.add_argument("--models_dir", type=str, default="../models")
+    parser.add_argument("--regressor_name", type=str, default="best_regressor_pipeline.pkl")
+    parser.add_argument("--classifier_name", type=str, default="best_classifier_pipeline.pkl")
+    parser.add_argument("--kbest", type=int, default=20)
+    args = parser.parse_args()
+
+    df = read_data(args.data)
+
+    # Train + save both models
+    cp = CompleteCryptoPipeline(models_dir=args.models_dir, 
+                               regressor_name=args.regressor_name,
+                               classifier_name=args.classifier_name)
+    result = cp.fit_and_save(df, k_best=args.kbest)
+
+    print("✅ Both pipelines trained and saved.")
+    print(f"📦 Regressor: {result['regressor_path']}")
+    print(f"📦 Classifier: {result['classifier_path']}")
+    print("📈 Regressor Metrics:", result["regressor_metrics"])
+    print("📊 Classifier Metrics:", result["classifier_metrics"])
 
 if __name__ == "__main__":
-    try:
-        success = main()
-        if success:
-            print("\n✅ Pipeline execution completed successfully!")
-        else:
-            print("\n❌ Pipeline execution failed!")
-    except Exception as e:
-        print(f"\n💥 Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
+    main()
