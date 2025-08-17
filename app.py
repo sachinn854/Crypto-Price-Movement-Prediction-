@@ -1,10 +1,3 @@
-"""
-🚀 Crypto Price Prediction App - V4.1
-======================================
-Professional Streamlit app using best_pipeline.pkl
-Clean version with proper imports
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -20,7 +13,6 @@ warnings.filterwarnings('ignore')
 src_path = os.path.join(os.path.dirname(__file__), 'src')
 sys.path.append(src_path)
 
-# Import the custom classes
 try:
     from src.unified_pipeline import CompleteCryptoPipeline
     print("✅ Custom classes imported successfully!")
@@ -29,7 +21,6 @@ except ImportError as e:
     st.error("Please ensure unified_pipeline.py is in the src folder")
     st.stop()
 
-# Page config
 st.set_page_config(
     page_title="🚀 Crypto Predictor V4.1",
     page_icon="💰",
@@ -37,7 +28,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS for styling
 st.markdown("""
 <style>
     .main-header {font-size: 3rem; font-weight: bold; text-align: center;
@@ -60,7 +51,6 @@ st.markdown("""
 
 @st.cache_resource
 def load_complete_pipeline():
-    """Load both regressor and classifier pipelines"""
     regressor_path = "models/best_regressor_pipeline.pkl"
     classifier_path = "models/best_classifier_pipeline.pkl"
     
@@ -75,11 +65,9 @@ def load_complete_pipeline():
         return None
     
     try:
-        # Use the CompleteCryptoPipeline wrapper
         pipeline = CompleteCryptoPipeline(models_dir="models")
-        pipeline.load_pipelines()  # Load both models
+        pipeline.load_pipelines()
         
-        # Get pipeline info
         pipeline_info = {
             'pipeline_type': 'Dual Model Pipeline (Regressor + Classifier)',
             'regressor_path': regressor_path,
@@ -98,7 +86,6 @@ def load_complete_pipeline():
         return None
 
 def create_input_data(symbol, close_price, high_price, low_price, open_price, volume_from, volume_to):
-    """Create RAW input DataFrame - let pipeline handle all feature engineering"""
     input_data = pd.DataFrame({
         'time': [pd.Timestamp.now()],
         'high': [high_price],
@@ -109,20 +96,17 @@ def create_input_data(symbol, close_price, high_price, low_price, open_price, vo
         'close': [close_price],
         'conversionType': ['direct'],
         'symbol': [symbol]
-        # Removed all engineered features - pipeline will create them
     })
     return input_data
 
 def display_pipeline_info(pipeline_info):
-    """Display pipeline information in sidebar"""
     st.sidebar.markdown("## 🔧 Dual Model Pipeline")
     
     st.sidebar.markdown(f"**Type:** {pipeline_info['pipeline_type']}")
     st.sidebar.markdown(f"**📈 Regressor:** {pipeline_info['regressor_type']}")
     st.sidebar.markdown(f"**📊 Classifier:** {pipeline_info['classifier_type']}")
     
-    # Show model paths
-    st.sidebar.markdown("**� Model Files:**")
+    st.sidebar.markdown("**🎯 Model Files:**")
     st.sidebar.code(f"Regressor: {pipeline_info['regressor_path']}")
     st.sidebar.code(f"Classifier: {pipeline_info['classifier_path']}")
     
@@ -172,13 +156,11 @@ def main():
             st.error("❌ Invalid input values! Check prices and volumes.")
             st.stop()
             
-        # Create raw input data
         input_data = create_input_data(symbol, close_price, high_price, low_price, open_price, volume_from, volume_to)
         st.write("📊 Raw Input Data Shape:", input_data.shape)
         st.write("📋 Input Columns:", list(input_data.columns))
         
         try:
-            # Get both predictions using the dual-model pipeline
             predictions = pipeline.predict_both(input_data)
             predicted_return = predictions['return_pct']
             predicted_direction = predictions['direction']
