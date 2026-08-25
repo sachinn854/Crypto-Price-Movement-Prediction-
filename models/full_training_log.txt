@@ -1,0 +1,304 @@
+
+==============================================================================
+AUGMENTED DICKEY-FULLER STATIONARITY TEST (statsmodels)
+==============================================================================
+H0: series has a unit root (non-stationary).  Reject when p < 0.05.
+
+Symbol  Series           ADF stat     p-value    1% crit  Verdict
+-----------------------------------------------------------------
+ADA     price             -1.7626      0.3992     -3.431  non-stationary
+ADA     log_return       -31.0539           0     -3.431  STATIONARY
+BTC     price             -0.1573      0.9434     -3.431  non-stationary
+BTC     log_return       -31.3645           0     -3.431  STATIONARY
+DOGE    price             -1.4798      0.5435     -3.431  non-stationary
+DOGE    log_return       -29.9741           0     -3.431  STATIONARY
+DOT     price             -2.0550       0.263     -3.431  non-stationary
+DOT     log_return       -30.5524           0     -3.431  STATIONARY
+ETH     price             -1.0428      0.7374     -3.431  non-stationary
+ETH     log_return       -30.7664           0     -3.431  STATIONARY
+LTC     price             -2.5377      0.1066     -3.431  non-stationary
+LTC     log_return       -84.2042           0     -3.431  STATIONARY
+SOL     price             -1.5805      0.4934     -3.431  non-stationary
+SOL     log_return       -29.9887           0     -3.431  STATIONARY
+XRP     price             -0.0419      0.9549     -3.431  non-stationary
+XRP     log_return       -29.3622           0     -3.431  STATIONARY
+
+Summary:
+   Raw close price stationary : 0/8 symbols
+   Log returns stationary     : 8/8 symbols
+   Conclusion: ADF confirms log returns are stationary while raw price is not. Modelling target is therefore the next-period LOG RETURN, not price.
+
+==============================================================================
+FEATURE CONSTRUCTION
+==============================================================================
+Creating log-returns target (next-period)...
+   Rows after target creation: 519,300
+   Dropping current-bar leakage columns: ['return_1', 'log_return', 'hl_range', 'candle_body', 'upper_shadow', 'lower_shadow', 'body_to_range']
+Building lagged features (OHLCV, rolling stats, momentum, RSI/MACD/BB, time)...
+   Dropped 0 rows with undefined target
+   Final frame: 519,220 rows x 134 features (42 of them RSI/MACD/Bollinger)
+   Target log-return: mean=0.00004722  std=0.013507
+   Direction balance: 49.72% positive
+   Target vs return_lag1 correlation: -0.0274 (OK)
+
+==============================================================================
+TIME-SERIES CROSS-VALIDATION (5 expanding folds, per-symbol chronological, 24-bar embargo)
+==============================================================================
+   Fold 1: train= 86,358  test= 86,534
+   Fold 2: train=172,892  test= 86,534
+   Fold 3: train=259,426  test= 86,534
+   Fold 4: train=345,960  test= 86,534
+   Fold 5: train=432,494  test= 86,534
+
+   BASELINE (predict zero): R2=-0.000038  MAE=0.006521
+
+--- REGRESSION: next-period log return ---
+   random_forest   R2=-0.0072 +/- 0.0053   MAE=0.006530   RMSE=0.010794
+   decision_tree   R2=-0.0592 +/- 0.0327   MAE=0.006559   RMSE=0.011085
+   xgboost         R2=-0.0095 +/- 0.0089   MAE=0.006541   RMSE=0.010812
+   lightgbm        R2=-0.0073 +/- 0.0043   MAE=0.006540   RMSE=0.010794
+
+--- CLASSIFICATION: direction ---
+   random_forest   Acc= 0.5220 +/- 0.0053   F1=0.4862   Prec=0.5228
+   decision_tree   Acc= 0.5171 +/- 0.0030   F1=0.4777   Prec=0.5173
+   xgboost         Acc= 0.5200 +/- 0.0063   F1=0.4617   Prec=0.5231
+   lightgbm        Acc= 0.5209 +/- 0.0049   F1=0.4918   Prec=0.5210
+
+==============================================================================
+STATSMODELS INTERPRETABLE BASELINES (OLS / Logit)
+==============================================================================
+🔧 Fitting CryptoPreprocessor...
+   Input shape: (432494, 134)
+   Columns: ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']
+   Categorical columns: ['symbol']
+   Numerical columns: 133 columns
+   Encoding symbol: 8 unique values
+   After encoding shape: (432494, 134)
+   After scaling shape: (432494, 134)
+   Feature selection: 134 → 20 features
+   Selected features: 20
+✅ CryptoPreprocessor fitted successfully
+🔄 Transforming data...
+   Input shape: (432494, 134)
+   After scaling shape: (432494, 134)
+   After feature selection shape: (432494, 20)
+🔄 Transforming data...
+   Input shape: (86534, 134)
+   After scaling shape: (86534, 134)
+   After feature selection shape: (86534, 20)
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.004
+Model:                            OLS   Adj. R-squared:                  0.004
+Method:                 Least Squares   F-statistic:                     96.50
+Date:                Tue, 25 Aug 2026   Prob (F-statistic):               0.00
+Time:                        15:21:50   Log-Likelihood:             1.2275e+06
+No. Observations:              432494   AIC:                        -2.455e+06
+Df Residuals:                  432473   BIC:                        -2.455e+06
+Df Model:                          20                                         
+Covariance Type:            nonrobust                                         
+=======================================================================================
+                          coef    std err          t      P>|t|      [0.025      0.975]
+---------------------------------------------------------------------------------------
+const                4.796e-05   2.15e-05      2.227      0.026    5.74e-06    9.02e-05
+volumefrom_lag2         0.0003   5.07e-05      6.872      0.000       0.000       0.000
+vol_sma_5_lag1          0.0001      0.000      0.795      0.426      -0.000       0.000
+vol_sma_10_lag1        -0.0016      0.000     -6.262      0.000      -0.002      -0.001
+vol_sma_5_lag2         -0.0004      0.000     -2.904      0.004      -0.001      -0.000
+vol_sma_10_lag2         0.0018      0.000      7.742      0.000       0.001       0.002
+return_lag1             0.0002   5.82e-05      3.836      0.000       0.000       0.000
+return_lag2             0.0007   4.75e-05     14.973      0.000       0.001       0.001
+return_lag3         -8.885e-05   2.82e-05     -3.156      0.002      -0.000   -3.37e-05
+return_mean_5_lag1     -0.0005      4e-05    -13.263      0.000      -0.001      -0.000
+close_to_sma5_lag1  -7.873e-05   8.94e-05     -0.881      0.378      -0.000    9.64e-05
+close_to_sma10_lag1    -0.0006      0.000     -4.768      0.000      -0.001      -0.000
+close_to_sma5_lag2      0.0003   6.93e-05      4.394      0.000       0.000       0.000
+close_to_sma10_lag2 -3.599e-05   9.94e-05     -0.362      0.717      -0.000       0.000
+bb_bandwidth_lag1       0.0008      0.000      5.959      0.000       0.001       0.001
+bb_bandwidth_lag2      -0.0006      0.000     -4.207      0.000      -0.001      -0.000
+rsi_14_lag3             0.0001    4.6e-05      3.161      0.002    5.53e-05       0.000
+macd_hist_norm_lag3     0.0005   3.71e-05     12.319      0.000       0.000       0.001
+bb_pct_b_lag3          -0.3695      0.071     -5.202      0.000      -0.509      -0.230
+bb_upper_dist_lag3      0.0014      0.000      3.319      0.001       0.001       0.002
+bb_lower_dist_lag3      0.3682      0.071      5.183      0.000       0.229       0.507
+==============================================================================
+Omnibus:                   340452.394   Durbin-Watson:                   2.303
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):     473335833373.924
+Skew:                           1.471   Prob(JB):                         0.00
+Kurtosis:                    5128.075   Cond. No.                     1.13e+04
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large, 1.13e+04. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+   OLS test R2=-0.000935  MAE=0.005905
+   Significant coefficients at 5%: 18/21
+   Full summary saved to models\statsmodels_ols_summary.txt
+🔧 Fitting CryptoPreprocessor...
+   Input shape: (432494, 134)
+   Columns: ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']
+   Categorical columns: ['symbol']
+   Numerical columns: 133 columns
+   Encoding symbol: 8 unique values
+   After encoding shape: (432494, 134)
+   After scaling shape: (432494, 134)
+   Feature selection: 134 → 20 features
+   Selected features: 20
+✅ CryptoPreprocessor fitted successfully
+🔄 Transforming data...
+   Input shape: (432494, 134)
+   After scaling shape: (432494, 134)
+   After feature selection shape: (432494, 20)
+🔄 Transforming data...
+   Input shape: (86534, 134)
+   After scaling shape: (86534, 134)
+   After feature selection shape: (86534, 20)
+                           Logit Regression Results                           
+==============================================================================
+Dep. Variable:                      y   No. Observations:               432494
+Model:                          Logit   Df Residuals:                   432473
+Method:                           MLE   Df Model:                           20
+Date:                Tue, 25 Aug 2026   Pseudo R-squ.:                0.001682
+Time:                        15:22:05   Log-Likelihood:            -2.9927e+05
+converged:                       True   LL-Null:                   -2.9977e+05
+Covariance Type:            nonrobust   LLR p-value:                5.490e-201
+=======================================================================================
+                          coef    std err          z      P>|z|      [0.025      0.975]
+---------------------------------------------------------------------------------------
+const                  -0.0123      0.003     -4.049      0.000      -0.018      -0.006
+return_lag1             0.0186      0.011      1.737      0.082      -0.002       0.040
+return_mean_5_lag1     -0.0212      0.010     -2.211      0.027      -0.040      -0.002
+return_mean_10_lag1     0.0047      0.005      1.029      0.303      -0.004       0.014
+close_to_sma5_lag1     -0.0027      0.011     -0.240      0.810      -0.025       0.020
+close_to_sma10_lag1    -0.0282      0.012     -2.365      0.018      -0.052      -0.005
+close_to_sma5_lag2      0.0088      0.010      0.892      0.372      -0.011       0.028
+rsi_14_lag1            -0.2200      0.022    -10.089      0.000      -0.263      -0.177
+macd_hist_norm_lag1     0.0249      0.006      4.060      0.000       0.013       0.037
+bb_pct_b_lag1           0.1554     11.553      0.013      0.989     -22.489      22.799
+bb_upper_dist_lag1     -0.2954      0.181     -1.631      0.103      -0.650       0.059
+bb_lower_dist_lag1      0.1667     11.592      0.014      0.989     -22.553      22.887
+rsi_14_lag2             0.2285      0.021     10.769      0.000       0.187       0.270
+bb_pct_b_lag2          -0.0207     11.587     -0.002      0.999     -22.730      22.688
+bb_upper_dist_lag2     -0.0694      0.247     -0.281      0.779      -0.554       0.415
+bb_lower_dist_lag2     -0.0123     11.645     -0.001      0.999     -22.836      22.811
+bb_pct_b_lag3          -0.1329     11.026     -0.012      0.990     -21.743      21.477
+bb_upper_dist_lag3      0.2792      0.173      1.616      0.106      -0.059       0.618
+bb_lower_dist_lag3     -0.1240     11.044     -0.011      0.991     -21.771      21.523
+hour                    0.0301      0.005      6.234      0.000       0.021       0.040
+hour_sin               -0.0028      0.005     -0.575      0.565      -0.012       0.007
+=======================================================================================
+
+   Logit test accuracy=0.5109  pseudo-R2=0.00168
+   Significant coefficients at 5%: 7/21
+   Full summary saved to models\statsmodels_logit_summary.txt
+
+==============================================================================
+REFITTING CV WINNERS ON THE FULL DATASET
+==============================================================================
+   Regressor : random_forest
+   Classifier: random_forest
+🔧 Fitting CryptoPreprocessor...
+   Input shape: (519220, 134)
+   Columns: ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']
+   Categorical columns: ['symbol']
+   Numerical columns: 133 columns
+   Encoding symbol: 8 unique values
+   After encoding shape: (519220, 134)
+   After scaling shape: (519220, 134)
+   Feature selection: 134 → 20 features
+   Selected features: 20
+✅ CryptoPreprocessor fitted successfully
+🔄 Transforming data...
+   Input shape: (519220, 134)
+   After scaling shape: (519220, 134)
+   After feature selection shape: (519220, 20)
+🔧 Fitting CryptoPreprocessor...
+   Input shape: (519220, 134)
+   Columns: ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']
+   Categorical columns: ['symbol']
+   Numerical columns: 133 columns
+   Encoding symbol: 8 unique values
+   After encoding shape: (519220, 134)
+   After scaling shape: (519220, 134)
+   Feature selection: 134 → 20 features
+   Selected features: 20
+✅ CryptoPreprocessor fitted successfully
+🔄 Transforming data...
+   Input shape: (519220, 134)
+   After scaling shape: (519220, 134)
+   After feature selection shape: (519220, 20)
+
+==============================================================================
+FINAL MODEL COMPARISON  (5-fold expanding-window time-series CV)
+==============================================================================
+Model                Task            Metric             CV mean +/- std
+------------------------------------------------------------------------------
+random_forest        regression      R2              -0.0072 +/- 0.0053
+decision_tree        regression      R2              -0.0592 +/- 0.0327
+xgboost              regression      R2              -0.0095 +/- 0.0089
+lightgbm             regression      R2              -0.0073 +/- 0.0043
+OLS (statsmodels)    regression      R2                -0.0009 (1 fold)
+------------------------------------------------------------------------------
+random_forest        classification  Accuracy         0.5220 +/- 0.0053
+decision_tree        classification  Accuracy         0.5171 +/- 0.0030
+xgboost              classification  Accuracy         0.5200 +/- 0.0063
+lightgbm             classification  Accuracy         0.5209 +/- 0.0049
+Logit (statsmodels)  classification  Accuracy           0.5109 (1 fold)
+==============================================================================
+Note: the statsmodels rows are single-fold (fitted on the last CV fold),
+      so they are not directly comparable to the 5-fold means above.
+
+Performance is in the realistic range for hourly crypto returns.
+
+Metrics report written to models\training_report.json
+
+==============================================================================
+PLAIN-ENGLISH SUMMARY
+==============================================================================
+
+DATA: 519,220 hourly bars across 8 cryptocurrencies (ADA, BTC, DOGE, DOT, ETH, LTC, SOL, XRP).
+
+FEATURES: 134 predictors, all built from bars strictly
+before the one being predicted. Breakdown:
+   - Lagged OHLCV (t-1..t-5): 30
+   - RSI (14, Wilder): 3
+   - MACD (12/26/9): 18
+   - Bollinger Bands (20, 2sd): 21
+   - Rolling price/volume stats: 18
+   - Return moments (mean/std/skew/kurt): 19
+   - Price/volume ratios: 12
+   - Calendar / cyclical: 13
+   SelectKBest then narrows these to 20 inside the pipeline,
+   fit on training folds only.
+
+TARGET JUSTIFICATION (ADF test, statsmodels):
+   ADF confirms log returns are stationary while raw price is not. Modelling target is therefore the next-period LOG RETURN, not price.
+
+VALIDATION: 5-fold expanding-window time-series cross-validation.
+   TimeSeriesSplit is applied within each symbol's own chronology, so every
+   training bar precedes every test bar, with a 24-bar embargo between
+   them. No shuffling, no random splits, no lookahead.
+
+RESULTS (mean +/- std across 5 folds):
+   Best regressor  : random_forest
+      R2   = -0.0072 +/- 0.0053   (zero-forecast baseline R2 = -0.0000)
+      MAE  = 0.006530 +/- 0.001303
+      RMSE = 0.010794
+   Best classifier : random_forest
+      Accuracy  = 0.5220 +/- 0.0053
+      Precision = 0.5228   Recall = 0.4558   F1 = 0.4862
+   OLS baseline    : R2 = -0.0009, 18 coefficients significant at 5%
+   Logit baseline  : accuracy = 0.5109, pseudo-R2 = 0.00168
+
+HOW TO READ THIS: hourly crypto returns are near-unpredictable. An R2 a few
+points above zero and a directional accuracy a few points above 50% is the
+honest ceiling. The std across folds is the number that matters - it shows
+whether the edge survives different market regimes or came from one lucky split.
+==============================================================================
+✅ Both pipelines trained and saved.
+📦 Regressor: models\best_regressor_pipeline.pkl
+📦 Classifier: models\best_classifier_pipeline.pkl
+📈 Regressor Metrics: {'cv_r2_mean': -0.007240464024688897, 'cv_r2_std': 0.005326526125790256, 'cv_mae_mean': 0.0065296541517498394, 'cv_rmse_mean': 0.010793968100795989, 'cv_smape_mean': 197.2977866575338, 'r2': -0.007240464024688897, 'mae': 0.0065296541517498394, 'n_features': 134, 'n_rows': 519220, 'features_used': ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']}
+📊 Classifier Metrics: {'cv_accuracy_mean': 0.5220029121501375, 'cv_accuracy_std': 0.005265203725635367, 'cv_f1_mean': 0.48618003048406344, 'cv_precision_mean': 0.5227548621141134, 'cv_recall_mean': 0.4558329266483705, 'accuracy': 0.5220029121501375, 'f1': 0.48618003048406344, 'n_features': 134, 'n_rows': 519220, 'features_used': ['symbol', 'open_lag1', 'high_lag1', 'low_lag1', 'close_lag1', 'volumefrom_lag1', 'volumeto_lag1', 'open_lag2', 'high_lag2', 'low_lag2', 'close_lag2', 'volumefrom_lag2', 'volumeto_lag2', 'open_lag3', 'high_lag3', 'low_lag3', 'close_lag3', 'volumefrom_lag3', 'volumeto_lag3', 'open_lag4', 'high_lag4', 'low_lag4', 'close_lag4', 'volumefrom_lag4', 'volumeto_lag4', 'open_lag5', 'high_lag5', 'low_lag5', 'close_lag5', 'volumefrom_lag5', 'volumeto_lag5', 'sma_5_lag1', 'sma_10_lag1', 'sma_20_lag1', 'price_std_5_lag1', 'price_std_10_lag1', 'vol_sma_5_lag1', 'vol_sma_10_lag1', 'hl_range_sma_5_lag1', 'hl_range_std_5_lag1', 'sma_5_lag2', 'sma_10_lag2', 'sma_20_lag2', 'price_std_5_lag2', 'price_std_10_lag2', 'vol_sma_5_lag2', 'vol_sma_10_lag2', 'hl_range_sma_5_lag2', 'hl_range_std_5_lag2', 'return_lag1', 'return_lag2', 'return_lag3', 'return_lag4', 'return_lag5', 'return_lag6', 'return_lag7', 'return_mean_5_lag1', 'return_mean_10_lag1', 'return_std_5_lag1', 'return_std_10_lag1', 'return_skew_10_lag1', 'return_kurt_10_lag1', 'return_mean_5_lag2', 'return_mean_10_lag2', 'return_std_5_lag2', 'return_std_10_lag2', 'return_skew_10_lag2', 'return_kurt_10_lag2', 'close_to_sma5_lag1', 'close_to_sma10_lag1', 'vol_price_ratio_lag1', 'vol_to_sma_lag1', 'close_to_sma5_lag2', 'close_to_sma10_lag2', 'vol_price_ratio_lag2', 'vol_to_sma_lag2', 'close_to_sma5_lag3', 'close_to_sma10_lag3', 'vol_price_ratio_lag3', 'vol_to_sma_lag3', 'rsi_14_lag1', 'macd_lag1', 'macd_signal_lag1', 'macd_hist_lag1', 'macd_norm_lag1', 'macd_signal_norm_lag1', 'macd_hist_norm_lag1', 'bb_middle_lag1', 'bb_upper_lag1', 'bb_lower_lag1', 'bb_pct_b_lag1', 'bb_bandwidth_lag1', 'bb_upper_dist_lag1', 'bb_lower_dist_lag1', 'rsi_14_lag2', 'macd_lag2', 'macd_signal_lag2', 'macd_hist_lag2', 'macd_norm_lag2', 'macd_signal_norm_lag2', 'macd_hist_norm_lag2', 'bb_middle_lag2', 'bb_upper_lag2', 'bb_lower_lag2', 'bb_pct_b_lag2', 'bb_bandwidth_lag2', 'bb_upper_dist_lag2', 'bb_lower_dist_lag2', 'rsi_14_lag3', 'macd_lag3', 'macd_signal_lag3', 'macd_hist_lag3', 'macd_norm_lag3', 'macd_signal_norm_lag3', 'macd_hist_norm_lag3', 'bb_middle_lag3', 'bb_upper_lag3', 'bb_lower_lag3', 'bb_pct_b_lag3', 'bb_bandwidth_lag3', 'bb_upper_dist_lag3', 'bb_lower_dist_lag3', 'hour', 'day', 'month', 'quarter', 'weekday', 'is_weekend', 'hour_sin', 'hour_cos', 'month_sin', 'month_cos', 'weekday_sin', 'weekday_cos']}

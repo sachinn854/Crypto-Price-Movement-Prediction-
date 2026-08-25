@@ -10,3 +10,6 @@ main.py
 src/complete_pipeline.py
 *.tmp
 *.bak
+# Secrets - never commit
+.env
+*.env
