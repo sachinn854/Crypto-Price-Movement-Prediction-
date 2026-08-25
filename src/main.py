@@ -21,9 +21,9 @@ def read_data(path: str) -> pd.DataFrame:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", type=str, default="../Data/processed/final_cleaned_crypto_zero_removed.csv",
+    parser.add_argument("--data", type=str, default="Data/processed/final_cleaned_crypto_zero_removed.csv",
                         help="CSV with columns: symbol,time,open,high,low,close,volumefrom,volumeto[,return_1]")
-    parser.add_argument("--models_dir", type=str, default="../models")
+    parser.add_argument("--models_dir", type=str, default="models")  # FIXED: removed ../
     parser.add_argument("--regressor_name", type=str, default="best_regressor_pipeline.pkl")
     parser.add_argument("--classifier_name", type=str, default="best_classifier_pipeline.pkl")
     parser.add_argument("--kbest", type=int, default=20)

@@ -1,0 +1,46 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                      y   R-squared:                       0.004
+Model:                            OLS   Adj. R-squared:                  0.004
+Method:                 Least Squares   F-statistic:                     96.50
+Date:                Tue, 25 Aug 2026   Prob (F-statistic):               0.00
+Time:                        15:21:50   Log-Likelihood:             1.2275e+06
+No. Observations:              432494   AIC:                        -2.455e+06
+Df Residuals:                  432473   BIC:                        -2.455e+06
+Df Model:                          20                                         
+Covariance Type:            nonrobust                                         
+=======================================================================================
+                          coef    std err          t      P>|t|      [0.025      0.975]
+---------------------------------------------------------------------------------------
+const                4.796e-05   2.15e-05      2.227      0.026    5.74e-06    9.02e-05
+volumefrom_lag2         0.0003   5.07e-05      6.872      0.000       0.000       0.000
+vol_sma_5_lag1          0.0001      0.000      0.795      0.426      -0.000       0.000
+vol_sma_10_lag1        -0.0016      0.000     -6.262      0.000      -0.002      -0.001
+vol_sma_5_lag2         -0.0004      0.000     -2.904      0.004      -0.001      -0.000
+vol_sma_10_lag2         0.0018      0.000      7.742      0.000       0.001       0.002
+return_lag1             0.0002   5.82e-05      3.836      0.000       0.000       0.000
+return_lag2             0.0007   4.75e-05     14.973      0.000       0.001       0.001
+return_lag3         -8.885e-05   2.82e-05     -3.156      0.002      -0.000   -3.37e-05
+return_mean_5_lag1     -0.0005      4e-05    -13.263      0.000      -0.001      -0.000
+close_to_sma5_lag1  -7.873e-05   8.94e-05     -0.881      0.378      -0.000    9.64e-05
+close_to_sma10_lag1    -0.0006      0.000     -4.768      0.000      -0.001      -0.000
+close_to_sma5_lag2      0.0003   6.93e-05      4.394      0.000       0.000       0.000
+close_to_sma10_lag2 -3.599e-05   9.94e-05     -0.362      0.717      -0.000       0.000
+bb_bandwidth_lag1       0.0008      0.000      5.959      0.000       0.001       0.001
+bb_bandwidth_lag2      -0.0006      0.000     -4.207      0.000      -0.001      -0.000
+rsi_14_lag3             0.0001    4.6e-05      3.161      0.002    5.53e-05       0.000
+macd_hist_norm_lag3     0.0005   3.71e-05     12.319      0.000       0.000       0.001
+bb_pct_b_lag3          -0.3695      0.071     -5.202      0.000      -0.509      -0.230
+bb_upper_dist_lag3      0.0014      0.000      3.319      0.001       0.001       0.002
+bb_lower_dist_lag3      0.3682      0.071      5.183      0.000       0.229       0.507
+==============================================================================
+Omnibus:                   340452.394   Durbin-Watson:                   2.303
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):     473335833373.924
+Skew:                           1.471   Prob(JB):                         0.00
+Kurtosis:                    5128.075   Cond. No.                     1.13e+04
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The condition number is large, 1.13e+04. This might indicate that there are
+strong multicollinearity or other numerical problems.
